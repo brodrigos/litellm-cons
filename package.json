@@ -25,8 +25,7 @@
     ],
     "asar": false
   },
-  "devDependencies": {
-    "electron": "^24.22.1",
-    "electron-builder": "^24.13.3"
+  "dependencies": {
+    "express": "^4.19.2"
   }
 }

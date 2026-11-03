@@ -2,19 +2,26 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LiteLLM Cons - Configurações RPD por Grupo</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen font-sans p-6 antialiased">
+<body class="bg-slate-950 text-slate-100 min-h-screen font-sans p-4 sm:p-6 antialiased">
     <div class="max-w-md mx-auto">
-        <div class="flex items-center gap-3 mb-6">
-            <div class="p-3 bg-indigo-600/20 border border-indigo-500/30 rounded-2xl text-indigo-400 text-xl">
-                <i class="fa-solid fa-sliders"></i>
-            </div>
-            <div>
-                <h1 class="text-lg font-extrabold tracking-tight text-white">Configurações de Limites RPD</h1>
-                <p class="text-xs text-slate-400">Defina o limite diário de requisições (RPD) por grupo e credenciais do Gateway.</p>
+        <!-- Header com botão Voltar -->
+        <div class="flex items-center justify-between gap-3 mb-6">
+            <button onclick="goBack()" class="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-2 rounded-xl text-sm font-medium transition-colors">
+                <i class="fa-solid fa-arrow-left"></i> Voltar
+            </button>
+            <div class="flex items-center gap-3 flex-1">
+                <div class="p-3 bg-indigo-600/20 border border-indigo-500/30 rounded-2xl text-indigo-400 text-xl">
+                    <i class="fa-solid fa-sliders"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg font-extrabold tracking-tight text-white">Configurações de Limites RPD</h1>
+                    <p class="text-xs text-slate-400">Defina o limite diário de requisições (RPD) por grupo e credenciais do Gateway.</p>
+                </div>
             </div>
         </div>
 
@@ -46,7 +53,7 @@
                 </div>
             </div>
 
-            <div class="flex justify-end gap-3 pt-2">
+            <div class="flex justify-end gap-3 pt-4">
                 <button type="submit" class="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs px-5 py-2.5 rounded-xl shadow-lg shadow-indigo-600/30 transition-all flex items-center gap-2">
                     <i class="fa-solid fa-floppy-disk"></i>
                     Salvar Configurações
@@ -56,7 +63,44 @@
     </div>
 
     <script>
-        const { ipcRenderer } = require('electron');
+        let ipcRenderer;
+        try {
+            ipcRenderer = require('electron').ipcRenderer;
+        } catch (e) {
+            ipcRenderer = {
+                async invoke(channel, ...args) {
+                    if (channel === 'get-config') {
+                        const res = await fetch('/api/config');
+                        return await res.json();
+                    }
+                    if (channel === 'fetch-models') {
+                        const res = await fetch('/api/models');
+                        return await res.json();
+                    }
+                    if (channel === 'fetch-usage') {
+                        const res = await fetch('/api/usage');
+                        return await res.json();
+                    }
+                    if (channel === 'open-settings-window') {
+                        window.location.href = '/settings.html';
+                        return true;
+                    }
+                    if (channel === 'save-config') {
+                        const res = await fetch('/api/config', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(args[0])
+                        });
+                        return await res.json();
+                    }
+                },
+                on() {}
+            };
+        }
+
+        function goBack() {
+            window.location.href = '/';
+        }
 
         async function init() {
             const cfg = await ipcRenderer.invoke('get-config');
@@ -73,7 +117,6 @@
             const apiModels = (modelsRes && modelsRes.success) ? modelsRes.models : [];
             const savedKeys = Object.keys(groupsMap).filter(g => g !== 'default');
 
-            // Unir modelos vindos da API do LiteLLM + chaves salvas anteriormente
             const keys = Array.from(new Set([...apiModels, ...savedKeys]));
 
             if (keys.length === 0) {
@@ -109,7 +152,7 @@
             });
 
             await ipcRenderer.invoke('save-config', cfg);
-            window.close();
+            goBack();
         });
 
         init();
