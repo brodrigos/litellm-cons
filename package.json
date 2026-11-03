@@ -1,0 +1,32 @@
+{
+  "name": "litellm-cons",
+  "version": "1.0.0",
+  "author": "Brodrigos",
+  "description": "LiteLLM Cons - Monitor de Quota RPD por Grupo de Modelo",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win --x64"
+  },
+  "build": {
+    "appId": "com.litellm.cons",
+    "productName": "LiteLLM Cons",
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "files": [
+      "main.js",
+      "tray-panel.html",
+      "settings.html",
+      "package.json"
+    ],
+    "asar": false
+  },
+  "devDependencies": {
+    "electron": "^24.22.1",
+    "electron-builder": "^24.13.3"
+  }
+}
