@@ -25,6 +25,26 @@ const defaultConfig = {
   litellmApiKey: '1234'
 };
 
+// Metadados dos modelos: parametros e contexto
+const MODEL_META = {
+  'groq-fast': { params: 'LLaMA 3 70B', context: '131,072 tokens' },
+  'gemini-fallback': { params: 'Gemini Pro', context: '1,048,576 tokens' },
+  'gemini-3.6-flash': { params: 'Gemini 3.6 Flash', context: '1,048,576 tokens' },
+  'gemini-3.5-flash': { params: 'Gemini 3.5 Flash', context: '1,048,576 tokens' },
+  'gemini-3.5-flash-lite': { params: 'Gemini 3.5 Flash Lite', context: '1,048,576 tokens' },
+  'or-lightning': { params: 'Nemotron Lightning', context: '131,072 tokens' },
+  'or-super-vl': { params: 'Nemotron Super VL', context: '131,072 tokens' },
+  'or-flint': { params: 'Nemotron Flint', context: '131,072 tokens' },
+  'or-north': { params: 'Nemotron North', context: '131,072 tokens' },
+  'or-inkling': { params: 'Unknown', context: 'Unknown' },
+  'or-free': { params: 'Unknown', context: 'Unknown' },
+  'default': { params: 'Unknown', context: 'Unknown' }
+};
+
+function getModelMeta(modelName) {
+  return MODEL_META[modelName] || { params: 'Unknown', context: 'Unknown' };
+}
+
 function loadConfig() {
   try { if (fs.existsSync(CONFIG_PATH)) return { ...defaultConfig, ...JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8')) }; } catch (e) {}
   return defaultConfig;

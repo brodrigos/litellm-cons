@@ -11,12 +11,14 @@ Acompanhe o consumo diário de requisições de cada modelo configurado no seu L
 ## Recursos
 
 - 📊 Lista de grupos de modelos com consumo RPD do dia
+- 🧠 Exibição de parâmetros e tamanho de contexto de cada modelo
 - 📈 Barra de progresso visual com cores por nível de uso
 - ⚙️ Configuração de limites RPD por grupo (ex: `groq-fast`, `gemini-fallback`, `or-super-vl`, etc.)
 - 🌐 Endpoints de API REST (`/api/config`, `/api/models`, `/api/usage`)
 - 📱 Responsivo para celulares (viewport mobile, fontes adaptáveis)
 - 🔁 Atualização automática a cada 30 segundos
 - ⏳ Processo gerenciado pelo PM2 com reinício automático
+- 💾 Cache persistente em arquivo para respostas instantâneas após a primeira carga
 
 ## Instalação
 
@@ -35,18 +37,9 @@ O servidor web usa apenas **Express** (sem Electron necessário para rodar no se
 npm install
 ```
 
-> O `package.json` original continha `electron` e `electron-builder` como `devDependencies`. Para rodar como serviço web no servidor, removemos essas dependências e mantemos apenas `express`.
-
 ### 3. Configurar o LiteLLM Gateway
 
-Edite as variáveis de ambiente ou o arquivo de configuração gerado automaticamente na primeira execução:
-
-- `LITELLM_HOST` — IP do gateway LiteLLM (padrão: `192.168.1.130`)
-- `LITELLM_PORT` — Porta do gateway (padrão: `4000`)
-- `LITELLM_API_KEY` — Chave master/Bearer do LiteLLM (padrão: `1234`)
-- `PORT` — Porta do servidor LiteLLM Cons (padrão: `3031`)
-
-Exemplo:
+Defina as variáveis de ambiente antes de iniciar:
 
 ```bash
 export LITELLM_HOST=192.168.1.130
@@ -54,6 +47,8 @@ export LITELLM_PORT=4000
 export LITELLM_API_KEY=1234
 export PORT=3031
 ```
+
+Valores padrão: Host `192.168.1.130`, Porta `4000`, Chave `1234`, Porta do Cons `3031`.
 
 ### 4. Iniciar o servidor
 
@@ -96,6 +91,15 @@ Na aba **Configurações**, você pode definir o limite máximo de requisições
 | gemini-3.5-flash-lite | 1500 |
 | or-super-vl | 200 |
 | or-flint | 200 |
+
+## Metadados dos Modelos
+
+Cada card exibe:
+
+- **Parâmetros**: tamanho do modelo (ex: `LLaMA 3 70B`, `Gemini 3.5 Flash`)
+- **Contexto**: tamanho máximo da janela de contexto (ex: `131,072 tokens`, `1,048,576 tokens`)
+
+Os metadados são definidos no arquivo `server.js` na constante `MODEL_META` e podem ser ajustados conforme necessário.
 
 ## Ordenação
 
