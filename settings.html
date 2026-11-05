@@ -29,8 +29,16 @@
             <!-- Limites RPD por Grupo -->
             <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 space-y-3">
                 <h2 class="text-xs font-bold uppercase tracking-wider text-indigo-400">Limites RPD por Grupo de Provedor</h2>
-                <div class="space-y-2.5 max-h-60 overflow-y-auto pr-1" id="requests-inputs">
+                <div class="space-y-2.5 max-h-48 overflow-y-auto pr-1" id="requests-inputs">
                     <!-- Dynamic inputs injected here -->
+                </div>
+            </div>
+
+            <!-- Timeout por Modelo (segundos) -->
+            <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 space-y-3">
+                <h2 class="text-xs font-bold uppercase tracking-wider text-indigo-400">Timeout por Modelo (Segundos)</h2>
+                <div class="space-y-2.5 max-h-48 overflow-y-auto pr-1" id="timeout-inputs">
+                    <!-- Dynamic timeout inputs injected here -->
                 </div>
             </div>
 
@@ -134,6 +142,22 @@
                 `;
                 container.appendChild(div);
             });
+
+            // Timeout inputs per model
+            const timeoutContainer = document.getElementById('timeout-inputs');
+            timeoutContainer.innerHTML = '';
+            const timeoutsMap = cfg.modelTimeouts || {};
+            keys.forEach(g => {
+                if (g === 'default') return;
+                const val = timeoutsMap[g] || 120;
+                const div = document.createElement('div');
+                div.className = 'flex items-center justify-between gap-3';
+                div.innerHTML = `
+                    <span class="text-xs font-medium text-slate-300 w-40 truncate" title="${g}">${g}</span>
+                    <input type="number" data-group="${g}" value="${val}" class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs font-mono text-slate-200 focus:outline-none focus:border-indigo-500">
+                `;
+                timeoutContainer.appendChild(div);
+            });
         }
 
         document.getElementById('settings-form').addEventListener('submit', async (e) => {
@@ -145,10 +169,16 @@
             cfg.litellmApiKey = document.getElementById('apikey-input').value;
 
             if (!cfg.maxRequestsByGroup) cfg.maxRequestsByGroup = {};
+            if (!cfg.modelTimeouts) cfg.modelTimeouts = {};
             
             document.querySelectorAll('#requests-inputs input').forEach(input => {
                 const group = input.getAttribute('data-group');
                 cfg.maxRequestsByGroup[group] = Number(input.value) || 1500;
+            });
+
+            document.querySelectorAll('#timeout-inputs input').forEach(input => {
+                const group = input.getAttribute('data-group');
+                cfg.modelTimeouts[group] = Number(input.value) || 120;
             });
 
             await ipcRenderer.invoke('save-config', cfg);

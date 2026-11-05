@@ -264,11 +264,16 @@
             const cfg = await ipcRenderer.invoke("get-config");
             const unique = Array.from(new Set(currentModels.filter(Boolean)));
             cfg.modelGroups = unique;
+            if (!cfg.modelTimeouts) cfg.modelTimeouts = {};
+            document.querySelectorAll('#manager-list input[data-model]').forEach(input => {
+                const modelName = input.getAttribute('data-model');
+                cfg.modelTimeouts[modelName] = Number(input.value) || 120;
+            });
             await ipcRenderer.invoke("save-config", cfg);
             currentModels = unique;
             renderModelManager();
             fetchModelsFromApi().then(() => refreshData());
-            alert("Lista de modelos salva com sucesso.");
+            alert("Lista de modelos e timeouts salvos com sucesso.");
         }
 
         function addModel() {
@@ -302,6 +307,8 @@
                 if (currentModels.length === 0) {
                     container.innerHTML += `<div class="text-center py-6 text-slate-500 text-sm">Nenhum modelo cadastrado.</div>`;
                 } else {
+                    const cfgTimeouts = await ipcRenderer.invoke("get-config");
+                    const modelTimeouts = cfgTimeouts?.modelTimeouts || {};
                     currentModels.forEach((name, idx) => {
                         const row = document.createElement("div");
                         row.className = "flex items-center justify-between gap-3 bg-slate-800/50 rounded-xl p-3 mb-2 border border-slate-700";
@@ -309,6 +316,7 @@
                             <div class="flex items-center gap-3 w-full">
                                 <span class="w-6 h-6 rounded-full bg-slate-600 flex items-center justify-center text-xs text-slate-300">${idx + 1}</span>
                                 <span class="text-sm text-slate-200 truncate" title="${name}">${name}</span>
+                                <input type="number" data-model="${name}" value="${modelTimeouts[name] || 120}" placeholder="timeout (s)" class="bg-slate-950 border border-slate-800 rounded px-2 py-1 text-[10px] text-slate-200 w-16 focus:outline-none focus:border-indigo-500">
                             </div>
                             <button onclick="removeModel('${name.replace(/'/g, "\\'")}')" class="text-xs text-rose-400 hover:text-rose-300">
                                 <i class="fa-solid fa-trash-alt"></i>
@@ -453,14 +461,18 @@
         }
 
         async function restartServer() {
-            if (!confirm("Tem certeza que deseja reiniciar o servidor LiteLLM Cons?\nO painel será desligado momentaneamente.")) return;
+            if (!confirm("Deseja testar/reiniciar a conexão com o LiteLLM Gateway em 192.168.1.130?")) return;
             try {
-                const res = await fetch("/api/restart-server", { method: "POST" });
+                const res = await fetch("/api/restart-litellm", { method: "POST" });
                 const data = await res.json();
-                document.getElementById("status-text").innerText = "Reiniciando servidor...";
-                document.getElementById("status-dot").className = "w-2.5 h-2.5 rounded-full bg-amber-500";
+                if (data.success) {
+                    alert(data.message);
+                } else {
+                    alert("Aviso: " + data.error);
+                }
+                refreshData();
             } catch (e) {
-                alert("Erro ao reiniciar: " + e.message);
+                alert("Erro ao reiniciar/testar LiteLLM: " + e.message);
             }
         }
 

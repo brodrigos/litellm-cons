@@ -88,12 +88,20 @@ app.get('/api/router-settings', (req, res) => {
   reqHttp.on('timeout', () => { reqHttp.destroy(); if (!res.headersSent) res.json({ success: false, error: 'Timeout' }); });
 });
 
-app.post('/api/restart-server', (req, res) => {
-  // Restart litellm-cons or notify
-  if (!res.headersSent) res.json({ success: true, message: 'Comando de reinício enviado.' });
-  setTimeout(() => {
-    process.exit(0);
-  }, 1000);
+app.post('/api/restart-litellm', (req, res) => {
+  const host = appConfig.litellmHost || '192.168.1.130';
+  // Tentar reiniciar o serviço docker/litellm via requisição ou instrução
+  const reqHttp = http.request({ hostname: host, port: appConfig.litellmPort || 4000, path: '/health/readiness', method: 'GET', timeout: 5000 }, (r) => {
+    if (!res.headersSent) res.json({ success: true, message: 'LiteLLM Gateway está online. Para reiniciar o container no NAS, execute docker restart no host 192.168.1.130.' });
+  });
+  reqHttp.on('error', (err) => {
+    if (!res.headersSent) res.json({ success: false, error: 'Não foi possível contatar o LiteLLM Gateway: ' + err.message });
+  });
+  reqHttp.on('timeout', () => {
+    reqHttp.destroy();
+    if (!res.headersSent) res.json({ success: false, error: 'Timeout ao contatar LiteLLM Gateway' });
+  });
+  reqHttp.end();
 });
 
 app.get('/api/models', (req, res) => {
