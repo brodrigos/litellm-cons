@@ -69,6 +69,33 @@ let cache = loadCache();
 app.get('/api/config', (req, res) => res.json(appConfig));
 app.post('/api/config', (req, res) => { appConfig = { ...appConfig, ...req.body }; saveConfig(appConfig); cache = { usage: null, models: null, ts: 0 }; saveCache(cache); if (!res.headersSent) res.json({ success: true }); });
 
+// Proxy router settings (fallbacks & router config) from LiteLLM
+app.get('/api/router-settings', (req, res) => {
+  const host = appConfig.litellmHost || '192.168.1.130';
+  const port = appConfig.litellmPort || 4000;
+  const apiKey = appConfig.litellmApiKey || '1234';
+  const reqHttp = http.get({ hostname: host, port: port, path: '/router/settings', headers: { Authorization: 'Bearer ' + apiKey }, timeout: 10000 }, (r) => {
+    let d = ''; r.on('data', c => d += c); r.on('end', () => {
+      try {
+        const result = JSON.parse(d);
+        if (!res.headersSent) res.json({ success: true, settings: result });
+      } catch (e) {
+        if (!res.headersSent) res.json({ success: false, error: e.message });
+      }
+    });
+  });
+  reqHttp.on('error', (err) => { if (!res.headersSent) res.json({ success: false, error: err.message }); });
+  reqHttp.on('timeout', () => { reqHttp.destroy(); if (!res.headersSent) res.json({ success: false, error: 'Timeout' }); });
+});
+
+app.post('/api/restart-server', (req, res) => {
+  // Restart litellm-cons or notify
+  if (!res.headersSent) res.json({ success: true, message: 'Comando de reinício enviado.' });
+  setTimeout(() => {
+    process.exit(0);
+  }, 1000);
+});
+
 app.get('/api/models', (req, res) => {
   if (cache.models && (Date.now() - cache.ts < CACHE_TTL)) {
     if (!res.headersSent) return res.json({ success: true, models: cache.models });
