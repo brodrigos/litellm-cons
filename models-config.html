@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LiteLLM Cons - Gerenciar Modelos & Timeout</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen font-sans p-4 sm:p-6 antialiased">
+    <div class="max-w-5xl mx-auto">
+        <!-- Header com botão Voltar -->
+        <div class="flex items-center justify-between gap-3 mb-6">
+            <button onclick="goBack()" class="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-300 px-4 py-2 rounded-xl text-sm font-medium transition-colors">
+                <i class="fa-solid fa-arrow-left"></i> Voltar ao Painel
+            </button>
+            <div class="flex items-center gap-3 flex-1">
+                <div class="p-3 bg-indigo-600/20 border border-indigo-500/30 rounded-2xl text-indigo-400 text-xl">
+                    <i class="fa-solid fa-sliders-h"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg font-extrabold tracking-tight text-white">Gerenciar Modelos & Timeout</title>
+                    <p class="text-xs text-slate-400">Edite, inclua ou exclua modelos do LiteLLM Gateway e ajuste o timeout de cada um.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Formulário para adicionar novo modelo -->
+        <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 space-y-4 mb-6">
+            <h2 class="text-xs font-bold uppercase tracking-wider text-indigo-400">Adicionar Modelo</h2>
+            <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                <div>
+                    <label class="block text-[11px] font-medium text-slate-400 mb-1">Nome do Grupo</label>
+                    <input type="text" id="new-model-name" placeholder="ex: groq-fast" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-[11px] font-medium text-slate-400 mb-1">Limite RPD (dia)</label>
+                    <input type="number" id="new-model-rpd" placeholder="1500" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs font-mono text-slate-200 focus:outline-none focus:border-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-[11px] font-medium text-slate-400 mb-1">Timeout (seg)</label>
+                    <input type="number" id="new-model-timeout" placeholder="120" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs font-mono text-slate-200 focus:outline-none focus:border-indigo-500">
+                </div>
+                <div class="flex items-end">
+                    <button onclick="addModel()" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs px-5 py-2.5 rounded-xl shadow-lg shadow-indigo-600/30 transition-all flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-plus"></i> Incluir
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lista de modelos -->
+        <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 space-y-2 overflow-y-auto max-h-[60vh]">
+            <h2 class="text-xs font-bold uppercase tracking-wider text-indigo-400 mb-3">Modelos Configurados</h2>
+            <div id="models-list">
+                <!-- Dynamic rows injected here -->
+                <div class="text-center py-8 text-slate-500 text-sm">
+                    <i class="fa-solid fa-circle-notch fa-spin text-2xl mb-3 text-indigo-400"></i>
+                    <p>Carregando modelos...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Botão salvar -->
+        <div class="flex justify-end pt-4">
+            <button onclick="saveConfig()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-6 py-2.5 rounded-xl shadow-lg shadow-emerald-600/30 transition-all flex items-center justify-center gap-2">
+                <i class="fa-solid fa-save"></i> Salvar Aplicações
+            </button>
+        </div>
+
+        <p class="text-[10px] text-slate-500 mt-4 text-center">
+            As alterações são salvas localmente no litellm-cons e enviadas para o LiteLLM Gateway (192.168.1.130:4000) via API de gerenciamento de modelos.
+        </p>
+    </div>
+
+    <script>
+        let ipcRenderer;
+        try {
+            ipcRenderer = require('electron').ipcRenderer;
+        } catch (e) {
+            ipcRenderer = {
+                async invoke(channel, ...args) {
+                    if (channel === 'get-config') {
+                        const res = await fetch('/api/config');
+                        return await res.json();
+                    }
+                    if (channel === 'fetch-models') {
+                        const res = await fetch('/api/models');
+                        return await res.json();
+                    }
+                    if (channel === 'save-config') {
+                        const res = await fetch('/api/config', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(args[0])
+                        });
+                        return await res.json();
+                    }
+                    if (channel === 'go-back') {
+                        window.location.href = '/';
+                        return true;
+                    }
+                },
+                on() {}
+            };
+        }
+
+        function goBack() { ipcRenderer.invoke('go-back'); }
+
+        let currentConfig = {};
+
+        async function init() {
+            try {
+                currentConfig = await ipcRenderer.invoke('get-config');
+                renderModels(currentConfig);
+            } catch (e) {
+                console.error('init error:', e);
+                document.getElementById('models-list').innerHTML = `
+                    <div class="text-center py-8 text-slate-500 text-sm">
+                        <i class="fa-solid fa-triangle-exclamation text-2xl mb-3 text-rose-400"></i>
+                        <p>Erro ao carregar configurações.</p>
+                    </div>`;
+            }
+        }
+
+        function renderModels(cfg) {
+            const container = document.getElementById('models-list');
+            container.innerHTML = '';
+
+            const maxRequests = cfg.maxRequestsByGroup || {};
+            const timeouts = cfg.modelTimeouts || {};
+
+            // Coletar todos os nomes de modelos
+            const allModelNames = new Set(Object.keys(maxRequests));
+            // Também incluir modelos que só existem em timeouts
+            Object.keys(timeouts).forEach(k => allModelNames.add(k));
+
+            const modelsArray = Array.from(allModelNames).filter(n => n !== 'default').sort();
+
+            if (modelsArray.length === 0) {
+                container.innerHTML = `<div class="text-center py-8 text-slate-500 text-sm">
+                    <i class="fa-solid fa-circle-info text-2xl mb-3"></i>
+                    <p>Nenhum modelo configurado.</p>
+                </div>`;
+                return;
+            }
+
+            modelsArray.forEach(name => {
+                const rpd = maxRequests[name] || cfg.maxRequestsByGroup?.default || 1500;
+                const timeout = timeouts[name] || 120;
+
+                const row = document.createElement('div');
+                row.className = 'flex items-center justify-between gap-3 bg-slate-800/50 rounded-xl p-3 border border-slate-700';
+
+                row.innerHTML = `
+                    <div class="flex items-center gap-3 flex-1 min-w-0">
+                        <span class="w-6 h-6 rounded-full bg-slate-600 flex items-center justify-center text-xs text-slate-400 shrink-0">${name.charAt(0).toUpperCase()}</span>
+                        <div class="min-w-0 flex-1">
+                            <span class="text-xs font-medium text-slate-300 truncate block" title="${name}">${name}</span>
+                            <span class="text-[10px] text-slate-500">RPD: ${rpd} · Timeout: ${timeout}s</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <input type="number" data-model="${name}" data-field="rpd" value="${rpd}" class="w-20 bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-[10px] text-slate-200 font-mono focus:outline-none focus:border-indigo-500">
+                        <input type="number" data-model="${name}" data-field="timeout" value="${timeout}" class="w-16 bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-[10px] text-slate-200 font-mono focus:outline-none focus:border-indigo-500">
+                        <button onclick="deleteModel('${name.replace(/'/g, "\\'")}')" class="text-rose-400 hover:text-rose-300 p-1">
+                            <i class="fa-solid fa-trash-alt"></i>
+                        </button>
+                    </div>
+                `;
+                container.appendChild(row);
+            });
+        }
+
+        async function addModel() {
+            const name = document.getElementById('new-model-name').value.trim();
+            const rpd = Number(document.getElementById('new-model-rpd').value) || 1500;
+            const timeout = Number(document.getElementById('new-model-timeout').value) || 120;
+
+            if (!name) { alert('Informe o nome do modelo.'); return; }
+            if (currentConfig.maxRequestsByGroup[name]) { alert('Este modelo já existe.'); return; }
+
+            if (!currentConfig.maxRequestsByGroup) currentConfig.maxRequestsByGroup = {};
+            if (!currentConfig.modelTimeouts) currentConfig.modelTimeouts = {};
+
+            currentConfig.maxRequestsByGroup[name] = rpd;
+            currentConfig.modelTimeouts[name] = timeout;
+
+            document.getElementById('new-model-name').value = '';
+            document.getElementById('new-model-rpd').value = '';
+            document.getElementById('new-model-timeout').value = '';
+
+            renderModels(currentConfig);
+        }
+
+        function deleteModel(name) {
+            if (!confirm(`Remover o modelo "${name}"?`)) return;
+            if (currentConfig.maxRequestsByGroup) delete currentConfig.maxRequestsByGroup[name];
+            if (currentConfig.modelTimeouts) delete currentConfig.modelTimeouts[name];
+            renderModels(currentConfig);
+        }
+
+        async function saveConfig() {
+            // Coletar valores editados dos inputs na tabela
+            document.querySelectorAll('#models-list input[data-model]').forEach(input => {
+                const modelName = input.getAttribute('data-model');
+                const field = input.getAttribute('data-field');
+                const val = Number(input.value);
+
+                if (field === 'rpd') {
+                    if (!currentConfig.maxRequestsByGroup) currentConfig.maxRequestsByGroup = {};
+                    currentConfig.maxRequestsByGroup[modelName] = val || 1500;
+                } else if (field === 'timeout') {
+                    if (!currentConfig.modelTimeouts) currentConfig.modelTimeouts = {};
+                    currentConfig.modelTimeouts[modelName] = val || 120;
+                }
+            });
+
+            try {
+                const res = await ipcRenderer.invoke('save-config', currentConfig);
+                if (res && res.success) {
+                    alert('Configurações de modelos e timeouts salvas com sucesso.');
+                } else {
+                    alert('Erro ao salvar: ' + (res?.error || 'desconhecido'));
+                }
+            } catch (e) {
+                alert('Erro ao salvar configurações: ' + e.message);
+            }
+        }
+
+        init();
+    </script>
+</body>
+</html>

@@ -79,19 +79,17 @@ O servidor ficará disponível em: **http://SEU_IP:3031**
 | `POST` | `/api/config` | Salva nova configuração |
 | `GET` | `/api/models` | Lista modelos ativos no gateway LiteLLM |
 | `GET` | `/api/usage` | Retorna consumo RPD do dia por grupo |
-| `GET` | `/api/router-settings` | Retorna configurações de roteamento/fallback do LiteLLM Gateway |
-| `POST` | `/api/restart-server` | Reinicia o servidor LiteLLM Cons (via PM2) |
+| `GET` | `/models-config.html` | Tela de gerenciamento de modelos e timeouts |
 
-## Gerenciamento de Modelos e Fallbacks
+## Gerenciamento de Modelos e Timeouts
 
-A partir da versão atual, você pode gerenciar modelos e ordem de fallback diretamente pelo painel:
+Na tela **Gerenciar Modelos & Timeout** você pode:
 
-- **Botão Modelos** (ao lado de Atualizar): abre o modal de gerenciamento onde você pode adicionar, remover e salvar a lista de modelos do LiteLLM.
-- **Botão Fallbacks**: exibe a ordem de fallback configurada por modelo no gateway LiteLLM, permitindo adicionar/remover modelos de fallback e salvar localmente.
-- **Botão Enviar para Gateway**: tenta aplicar as fallbacks ao LiteLLM Gateway via endpoint `/router/settings` (requer que o gateway esteja acessível e aceitar atualizações de configuração).
-- **Botão Reiniciar Servidor**: reinicia o processo `litellm-cons` (gerenciado pelo PM2) para aplicar mudanças que exigem reinício.
-
-> ⚠️ **Nota sobre alterações no gateway LiteLLM:** Adicionar/remover modelos e alterar a ordem de fallback depende da configuração `STORE_MODEL_IN_DB=True` no LiteLLM Gateway. Caso o gateway não aceite escrita via API, as alterações são salvas localmente no `litellm-cons-config.json` e refletidas no painel.
+- **Listar** todos os modelos configurados com seus respectivos limites RPD e timeouts
+- **Adicionar** novos modelos informando nome, limite RPD e timeout em segundos
+- **Editar** diretamente na tabela o limite RPD e timeout de cada modelo
+- **Deletar** modelos que não são mais necessários
+- **Salvar** todas as alterações, que serão gravadas no `litellm-cons-config.json`
 
 ## Configurações RPD
 
@@ -131,8 +129,8 @@ MIT
 
 ## Changelog
 
-### v1.1.0 (2026-11-05)
-- Adicionados botões de **Gerenciamento de Modelos & Fallbacks** e **Reinicialização do Servidor** ao lado do botão de atualização.
-- Implementado modal interativo de gerenciamento de modelos (adicionar/remover/salvar) e ordens de fallback por modelo.
-- Adicionados novos endpoints na API Express: `/api/router-settings` e `/api/restart-server`.
-- Atualizado README.md com documentação dos novos recursos e registro de Changelog.
+### v1.2.0 (2026-11-05)
+- Adicionada tela **Gerenciar Modelos & Timeout** (`models-config.html`) para editar, incluir e deletar modelos do LiteLLM Gateway.
+- Possibilidade de definir **timeout por modelo** (em segundos) além do limite RPD.
+- Novo botão de acesso ao gerenciamento de modelos no cabeçalho principal, ao lado das configurações.
+- Endpoint `/models-config.html` disponível na API do servidor.
