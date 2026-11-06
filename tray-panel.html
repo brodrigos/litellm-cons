@@ -156,7 +156,7 @@
             const groupsFromApi = modelGroupsFromApi || [];
             const usageGroups = Object.keys(usageMap);
 
-            const allGroupsSet = new Set([...groupsFromApi, ...usageGroups]);
+            const allGroupsSet = new Set(groupsFromApi); // apenas modelos ativos no gateway
             if (allGroupsSet.size === 0) {
                 ["groq-fast", "gemini-fallback", "or-super-vl", "or-flint"].forEach(g => allGroupsSet.add(g));
             }
